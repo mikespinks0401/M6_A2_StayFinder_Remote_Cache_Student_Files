@@ -116,37 +116,64 @@ export default function BookingScreen() {
   }
   // TODO 9:
   // Use useEffect() so the flow runs when selectedCityId changes.
-  if (isLoading && weather === null) {
-    return <LoadingState />
+  useEffect(() => {
+    loadCityData();
+  }, [selectedCityId]);
+ 
+  if (
+    isLoading &&
+    weather === null
+  ) {
+    return <LoadingState />;
   }
-
-  if (errorMessage !== '' && weather === null) {
-    return <ErrorState message={errorMessage} onRetry={() => loadCityData()} />
+ 
+  if (
+    errorMessage !== '' &&
+    weather === null
+  ) {
+    return (
+      <ErrorState
+        message={errorMessage}
+        onRetry={() =>
+          loadCityData()
+        }
+      />
+    );
   }
-
+ 
   return (
     <View style={styles.screen}>
       <BookingHeader
-        onRefresh={() => loadCityData(true)}
+        onRefresh={() =>
+          loadCityData(true)
+        }
         isRefreshing={isRefreshing}
       />
-
+ 
       <CitySelector
         cities={cities}
         selectedCityId={selectedCityId}
-        onSelectCity={setSelectedCityId}
+        onSelectCity={
+          setSelectedCityId
+        }
       />
-
+ 
       {errorMessage !== '' && (
         <View style={styles.banner}>
-          <Text style={styles.bannerText}>{errorMessage}</Text>
+          <Text style={styles.bannerText}>
+            {errorMessage}
+          </Text>
         </View>
       )}
-
+ 
       <FlatList
         data={cityHotels}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <HotelRow hotel={item} />}
+        keyExtractor={(item) =>
+          item.id
+        }
+        renderItem={({ item }) => (
+          <HotelRow hotel={item} />
+        )}
         ListHeaderComponent={
           <>
             {weather !== null && (
@@ -154,27 +181,30 @@ export default function BookingScreen() {
                 city={selectedCity}
                 weather={weather}
                 sourceLabel={sourceLabel}
-                lastUpdatedLabel={lastUpdatedLabel}
+                lastUpdatedLabel={
+                  lastUpdatedLabel
+                }
               />
             )}
-
+ 
             <View style={styles.sectionHeader}>
-              <Text style={styles.eyebrow}>STAY OPTIONS</Text>
+              <Text style={styles.eyebrow}>
+                STAY OPTIONS
+              </Text>
               <Text style={styles.heading}>
                 Properties in {selectedCity.name}
               </Text>
               <Text style={styles.subheading}>
-                Hotel records remain part of the existing project while
-                destination conditions now come from a remote service.
+                Hotel records remain part of the existing project while destination conditions now come from a remote service.
               </Text>
             </View>
           </>
         }
       />
     </View>
-  )
+  );
 }
-
+ 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -216,4 +246,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-})
+});
