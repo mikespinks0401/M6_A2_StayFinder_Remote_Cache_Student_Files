@@ -1,83 +1,38 @@
-import React, {
-  useEffect,
-  useState,
-} from 'react';
+import React, { useEffect, useState } from 'react'
 
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native'
 
-import BookingHeader from '../components/BookingHeader';
-import CitySelector from '../components/CitySelector';
-import HotelRow from '../components/HotelRow';
-import TravelConditionsCard from '../components/TravelConditionsCard';
-import {
-  ErrorState,
-  LoadingState,
-} from '../components/RequestStates';
+import BookingHeader from '../components/BookingHeader'
+import CitySelector from '../components/CitySelector'
+import HotelRow from '../components/HotelRow'
+import TravelConditionsCard from '../components/TravelConditionsCard'
+import { ErrorState, LoadingState } from '../components/RequestStates'
 
-import { cities } from '../data/cities';
-import { hotels } from '../data/hotels';
+import { cities } from '../data/cities'
+import { hotels } from '../data/hotels'
 
-import {
-  getTravelConditions,
-} from '../services/travelApi';
+import { getTravelConditions } from '../services/travelApi'
 
-import {
-  loadTravelCache,
-  saveTravelCache,
-} from '../services/travelCache';
+import { loadTravelCache, saveTravelCache } from '../services/travelCache'
 
 export default function BookingScreen() {
-  const [
-    selectedCityId,
-    setSelectedCityId,
-  ] = useState('houston');
+  const [selectedCityId, setSelectedCityId] = useState('houston')
 
-  const [
-    weather,
-    setWeather,
-  ] = useState(null);
+  const [weather, setWeather] = useState(null)
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(true);
+  const [isLoading, setIsLoading] = useState(true)
 
-  const [
-    isRefreshing,
-    setIsRefreshing,
-  ] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState('');
+  const [errorMessage, setErrorMessage] = useState('')
 
-  const [
-    sourceLabel,
-    setSourceLabel,
-  ] = useState('');
+  const [sourceLabel, setSourceLabel] = useState('')
 
-  const [
-    lastUpdatedLabel,
-    setLastUpdatedLabel,
-  ] = useState('');
+  const [lastUpdatedLabel, setLastUpdatedLabel] = useState('')
 
-  const selectedCity =
-    cities.find(
-      (city) =>
-        city.id === selectedCityId
-    );
+  const selectedCity = cities.find((city) => city.id === selectedCityId)
 
-  const cityHotels =
-    hotels.filter(
-      (hotel) =>
-        hotel.cityId === selectedCityId
-    );
+  const cityHotels = hotels.filter((hotel) => hotel.cityId === selectedCityId)
 
   // TODO 8:
   // Create async function loadCityData(isManualRefresh = false).
@@ -102,63 +57,96 @@ export default function BookingScreen() {
   //      otherwise show a message that cached data is being used
   // 11. finally stop loading and refreshing.
 
+  async function loadCityData(isManualRefresh = false) {
+    // 1. Show the right spinner
+    if (isManualRefresh) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
+
+    // 2. Clear old error
+    setErrorMessage('')
+
+    // Tracks whether something is on screen during this run.
+    // (The `weather` state variable won't reflect setWeather()
+    // calls made inside this same function call.)
+    let hasData = weather !== null
+
+    try {
+      // 3. Check the cache
+      const cached = await loadTravelCache(selectedCity.id)
+
+      // 4. Show cached data immediately if it exists
+      if (cached !== null) {
+        setWeather(cached.weather)
+        setSourceLabel('Saved cache')
+        setLastUpdatedLabel(formatUpdatedLabel(cached.savedAt))
+        setIsLoading(false)
+        hasData = true
+      }
+
+      // 5. Request fresh data
+      const freshData = await getTravelConditions(
+        selectedCity.latitude,
+        selectedCity.longitude,
+      )
+
+      // 6–8. Show live data
+      setWeather(freshData)
+      setSourceLabel('Live API')
+      setLastUpdatedLabel(formatUpdatedLabel(Date.now()))
+
+      // 9. Save for next time
+      await saveTravelCache(selectedCity.id, freshData)
+    } catch (error) {
+      // 10. Full error or cache-fallback message
+      if (!hasData) {
+        setErrorMessage(
+          'Unable to load travel conditions. Check your connection and try again.',
+        )
+      } else {
+        setErrorMessage('Live update failed. Showing saved conditions.')
+      }
+    } finally {
+      // 11. Stop all spinners
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }
   // TODO 9:
   // Use useEffect() so the flow runs when selectedCityId changes.
-
-  if (
-    isLoading &&
-    weather === null
-  ) {
-    return <LoadingState />;
+  if (isLoading && weather === null) {
+    return <LoadingState />
   }
 
-  if (
-    errorMessage !== '' &&
-    weather === null
-  ) {
-    return (
-      <ErrorState
-        message={errorMessage}
-        onRetry={() =>
-          loadCityData()
-        }
-      />
-    );
+  if (errorMessage !== '' && weather === null) {
+    return <ErrorState message={errorMessage} onRetry={() => loadCityData()} />
   }
 
   return (
     <View style={styles.screen}>
       <BookingHeader
-        onRefresh={() =>
-          loadCityData(true)
-        }
+        onRefresh={() => loadCityData(true)}
         isRefreshing={isRefreshing}
       />
 
       <CitySelector
         cities={cities}
         selectedCityId={selectedCityId}
-        onSelectCity={
-          setSelectedCityId
-        }
+        onSelectCity={setSelectedCityId}
       />
 
       {errorMessage !== '' && (
         <View style={styles.banner}>
-          <Text style={styles.bannerText}>
-            {errorMessage}
-          </Text>
+          <Text style={styles.bannerText}>{errorMessage}</Text>
         </View>
       )}
 
       <FlatList
         data={cityHotels}
-        keyExtractor={(item) =>
-          item.id
-        }
-        renderItem={({ item }) => (
-          <HotelRow hotel={item} />
-        )}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <HotelRow hotel={item} />}
         ListHeaderComponent={
           <>
             {weather !== null && (
@@ -166,28 +154,25 @@ export default function BookingScreen() {
                 city={selectedCity}
                 weather={weather}
                 sourceLabel={sourceLabel}
-                lastUpdatedLabel={
-                  lastUpdatedLabel
-                }
+                lastUpdatedLabel={lastUpdatedLabel}
               />
             )}
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.eyebrow}>
-                STAY OPTIONS
-              </Text>
+              <Text style={styles.eyebrow}>STAY OPTIONS</Text>
               <Text style={styles.heading}>
                 Properties in {selectedCity.name}
               </Text>
               <Text style={styles.subheading}>
-                Hotel records remain part of the existing project while destination conditions now come from a remote service.
+                Hotel records remain part of the existing project while
+                destination conditions now come from a remote service.
               </Text>
             </View>
           </>
         }
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -231,4 +216,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-});
+})
