@@ -15,6 +15,13 @@ import { getTravelConditions } from '../services/travelApi'
 
 import { loadTravelCache, saveTravelCache } from '../services/travelCache'
 
+function formatUpdatedLabel(timestamp) {
+  return `Updated ${new Date(timestamp).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`;
+} 
+
 export default function BookingScreen() {
   const [selectedCityId, setSelectedCityId] = useState('houston')
 
@@ -101,6 +108,7 @@ export default function BookingScreen() {
       await saveTravelCache(selectedCity.id, freshData)
     } catch (error) {
       // 10. Full error or cache-fallback message
+       console.log('Weather error:', error.message);
       if (!hasData) {
         setErrorMessage(
           'Unable to load travel conditions. Check your connection and try again.',
